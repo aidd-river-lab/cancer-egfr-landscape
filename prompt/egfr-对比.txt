@@ -1,0 +1,148 @@
+# 项目主提示词：EGFR 耐药靶点计算研究（完整上下文）
+
+> 使用方法：这是一份完整的项目背景文档，用于向任何AI助手（新开对话、
+> 换工具、换session）一次性建立完整上下文。全文复制粘贴即可，AI读完
+> 应该能立刻知道项目现状、下一步该做什么、以及必须遵守哪些规矩。
+
+---
+
+## 一、我是谁、这个项目为什么存在
+
+我是一名有10多年经验的程序员，**没有生物学/药物化学背景**。我在
+通过实操学习计算药物设计（CADD, Computer-Aided Drug Design）的
+基础流程，具体切入点是：**EGFR基因突变导致的肺癌，及其对第三代
+靶向药奥希替尼（osimertinib）产生耐药后的分子机制**。
+
+**项目定位（必须始终诚实）**：这是一个学习驱动的开源计算工具项目，
+产出的是"计算假说 + 可复现流程"，**不是药物发现成果，不构成任何
+医疗建议**。任何输出都需要湿实验（体外/细胞/动物实验）验证才有
+科学意义。
+
+## 二、核心生物学背景（供AI理解上下文，不需要重新科普给我）
+
+- EGFR是肺癌最常见驱动基因之一，突变（如L858R、19号外显子缺失）
+  会让其激酶结构域"持续激活"，不依赖外部信号，导致细胞无限增殖
+- 三代靶向药迭代：一代（吉非替尼/厄洛替尼，非共价可逆）→ 因
+  T790M"看门人"突变耐药 → 二代（阿法替尼，共价不可逆，但对野生型
+  EGFR也有毒性）→ 三代（奥希替尼，共价结合C797，突变选择性更好）
+  → 因**C797S突变**（797位半胱氨酸变丝氨酸，共价锚定失效）耐药
+- 我目前聚焦的靶点：**EGFR L858R/T790M/C797S 三重突变体**
+  （真实晶体结构 PDB: 6LUD）
+
+## 三、已确认可用的关键技术事实（不要重新搜索/编造，直接用）
+
+### 结构生物学
+- **PDB 6LUD**：EGFR(L858R/T790M/C797S) + osimertinib 共晶结构，
+  分辨率2.05Å，来自 Kashima et al., Mol Cancer Ther 2020,
+  PMID 32943545
+- 结合口袋残基（来自PDB原始SITE记录）：
+  `LEU718, PHE723, VAL726, ALA743, GLN791, LEU792, MET793(铰链区),
+  PRO794, GLY796, SER797(突变位点), ASP800, GLU804, LEU844`
+- 其他代际药物的参考结构：
+  - 一代（吉非替尼+L858R突变体）：PDB 2ITY
+  - 一代耐药机制（T790M看门人突变）：PDB 3UG2
+    (G719S/T790M + gefitinib)
+  - 二代（阿法替尼共价结合机制）：PDB 4G5J (WT + afatinib)
+  - 野生型+一代药：PDB 1M17 (WT + erlotinib)
+
+### 化学信息学
+- 奥希替尼 SMILES:
+  `CN1C=C(C2=CC=CC=C21)C3=NC(=NC=C3)NC4=C(C=C(C(=C4)NC(=O)C=C)N(C)CCN(C)C)OC`
+  分子式C28H33N7O2，MW 499.62，LogP 4.51（RDKit计算已验证）
+
+### 临床数据API
+- **cBioPortal REST API**：`https://www.cbioportal.org/api/v3/api-docs`
+  （Swagger/OpenAPI规范），官方推荐Python客户端是 `bravado`
+- 默认使用队列：`luad_tcga_pan_can_atlas_2018`（TCGA肺腺癌，
+  PanCancer Atlas版本）
+- 关键调用模式：
+  ```python
+  from bravado.client import SwaggerClient
+  cbioportal = SwaggerClient.from_url(
+      "https://www.cbioportal.org/api/v3/api-docs",
+      config={"validate_requests": False, "validate_responses": False,
+              "validate_swagger_spec": False})
+  ```
+
+### 运行环境限制
+- 我实际开发环境（AI沙盒容器）**网络受限，无法直接访问**
+  RCSB PDB、cBioPortal等外部站点（会被防火墙拦截，返回403）
+- 真正联网拉取真实数据的步骤，需要在**我本地已安装PyMOL、且网络
+  正常的机器**上运行
+- 本地已安装：PyMOL（可正常使用`fetch`命令联网下载结构）
+
+## 四、当前两个仓库的完整状态
+
+### 仓库1：`target-egfr-c797s`（单靶点结构分析与虚拟筛选）
+
+```
+target-egfr-c797s/（对应更早搭建的 egfr-c797s-pipeline）
+├── README.md              已写好，含免责声明
+├── docs/methodology.md    已写好
+├── scripts/
+│   ├── 1_fetch_structure.pml    PyMOL拉取6LUD并预处理（本地运行）
+│   ├── 2_prepare_ligands.py     ✅已实测：RDKit计算候选分子理化性质
+│   │                             + Lipinski/PAINS过滤
+│   ├── 3_dock_vina.sh           AutoDock Vina对接脚本模板
+│   └── 4_analyze_results.py     ✅已实测：正确解析Vina日志排序
+└── data/ligands/candidates.smi  示例分子库（osimertinib/gefitinib/
+                                   erlotinib，真实SMILES）
+```
+
+**已用PyMOL本地可视化验证过**：6LUD结构的整体折叠（N叶β折叠+C叶
+α螺旋）、结合口袋、C797S突变位点（红色标注）、M793铰链区（黄色
+标注）、奥希替尼配体（橙色，CPK配色区分C/N/O原子）。
+
+### 仓库2：`cancer-egfr-landscape`（临床突变频率×结构覆盖图谱）
+
+```
+cancer-egfr-landscape/
+├── README.md                 已写好，含临床数据专用免责声明
+├── docs/methodology.md       已写好，含4条已知局限性
+├── 01_clinical_data/
+│   ├── fetch_egfr_mutations.py          用bravado调用cBioPortal
+│   └── aggregate_mutation_frequency.py  ✅已实测，聚合逻辑正确
+│                                          （按位点统计频率，测试数据
+│                                          排序方向与真实临床流行病学
+│                                          一致：L858R>19del>T790M/G719S）
+├── 02_structure_mapping/     待开发（下一步，见下方"当前待办"）
+└── 03_docking_validation/    待开发（复用仓库1的对接流程）
+```
+
+## 五、工作原则（AI协作时必须遵守，不要跳过任何一条）
+
+1. **小步推进，做完一步就停下汇报**，不要连续自作主张跳好几步
+2. **能跑的代码先实际跑一遍再交付**，不能只凭"看起来对"就算完成
+3. 遇到**网络受限无法访问真实API**时：明确说明是环境限制、不是
+   代码问题；用"符合真实数据schema但明确标注为演示数据"的样例
+   测试逻辑，绝不能编造看起来像真实结果的数字
+4. 涉及生物/化学概念，**先用简明语言配合编程类比讲清楚原理**，
+   不能只给代码
+5. 每个模块必须包含**免责声明+已知局限性**，语气延续已有文档的
+   风格：诚实、不夸大、明确"计算假说"定位
+6. 涉及外部API（PDB/cBioPortal/ChEMBL等），**先搜索确认真实用法**，
+   不凭训练记忆编造端点/字段名
+7. 每完成一步，**用一句话总结"验证了什么、还有什么没验证"**
+
+## 六、当前待办（下一步具体任务）
+
+开发 `02_structure_mapping/`：对模块1产出的
+`results/egfr_mutation_frequency.csv`（按位点统计的真实患者突变
+频率表），逐个位点判断"RCSB PDB里是否存在覆盖该位点的已知抑制剂
+共晶结构"，输出：`突变位点 | 出现频率 | 是否有结构覆盖 | 对应PDB编号`。
+
+**需要先和我确认的设计问题**：怎么定义"结构覆盖"？
+（a）只要PDB里出现过这个突变位点就算，还是
+（b）要求该结构里同时解析了抑制剂结合复合物？
+
+确认规则后再开始写代码，代码要按"能验证的先验证"的原则实测。
+
+## 七、更长期的路线图（供AI理解全局，不代表要一次做完）
+
+```
+target-egfr-c797s:     结构分析 → 候选分子设计 → 对接验证（进行中）
+cancer-egfr-landscape:  临床频率（完成）→ 结构覆盖比对（下一步）
+                         → 空白位点的对接验证（复用仓库1流程）
+更远期（未开始，仅作方向参考，不要主动展开）：
+  - 扩展到其他常见耐药靶点（ALK、BRAF等）
+  - 给RDKit/OpenMM等开源工具提交PR

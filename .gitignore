@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+# 原始逐样本突变记录: 体量较大且可由 fetch_egfr_mutations.py 随时重新拉取, 不入库
+01_clinical_data/results/egfr_mutations_raw*.csv
+# 结构文件/中间产物: 都可以由 03_docking_validation 里的脚本重新生成, 不入库
+# (docking_ranked.csv 目前只有 --demo 演示数据, 真实跑完 Vina 后如果想入库可以手动移出这条规则)
+03_docking_validation/results/

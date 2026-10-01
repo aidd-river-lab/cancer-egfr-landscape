@@ -1,0 +1,8 @@
+site,frequency_pct,has_structure_coverage,covered_pdb_ids,apo_only_pdb_ids,status
+L858R,31.51,Y,7OXB;9XU9;3W2O;3W2P;3W2R;8A2B;8KFQ;3W2Q,,covered
+19del,27.4,N,,7TVD,apo_only
+L861Q,4.11,N,,,no_hit
+L62R,2.74,N,,,no_hit
+S768I,2.74,N,,,no_hit
+T790M,2.74,Y,6S89;6S8A;3IKA;5FEE;4WD5;5GMP;5GTZ,,covered
+G719A,2.74,N,,,no_hit
